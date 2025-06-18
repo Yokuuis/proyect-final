@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar Sesión</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body,
+      html {
+        min-height: 100vh;
+      }
+      #loginPage {
+        min-height: 100vh;
+        width: 100vw;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1000;
+        background: #f9fafb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      body.dark #loginPage {
+        background: #18181b;
+      }
+      body.dark,
+      body.dark .bg-white {
+        background: #18181b !important;
+        color: #f3f4f6 !important;
+      }
+      body.dark .text-gray-800,
+      body.dark .text-gray-900 {
+        color: #f3f4f6 !important;
+      }
+      body.dark .bg-gray-50 {
+        background: #18181b !important;
+      }
+      body.dark .bg-white {
+        background: #23272f !important;
+      }
+      body.dark input {
+        background: #23272f !important;
+        color: #f3f4f6 !important;
+        border-color: #333 !important;
+      }
+      body.dark .btn-primary {
+        background: linear-gradient(
+          135deg,
+          #2563eb 0%,
+          #1e293b 100%
+        ) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loginPage">
+      <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-sm">
+        <h2 class="text-2xl font-bold mb-6 text-center">Iniciar Sesión</h2>
+        <form id="loginForm" class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1"
+              >Usuario</label
+            >
+            <input
+              type="text"
+              id="loginUsuario"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1"
+              >Contraseña</label
+            >
+            <input
+              type="password"
+              id="loginPassword"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg input-focus"
+            />
+          </div>
+          <button
+            type="submit"
+            class="btn-primary w-full text-white py-2 rounded-lg font-medium hover-scale transition-all duration-200"
+          >
+            Entrar
+          </button>
+          <div
+            id="loginError"
+            class="text-red-600 text-center mt-2 hidden"
+          ></div>
+          <div class="text-center mt-2">
+            <a href="registro.html" class="text-blue-600 hover:underline"
+              >¿No tienes cuenta? Crea una aquí</a
+            >
+          </div>
+        </form>
+      </div>
+      <button
+        id="darkModeBtn"
+        title="Alternar modo oscuro/claro"
+        class="fixed top-4 right-4 z-50 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-full p-2 shadow-lg hover:scale-110 transition-all"
+      >
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+    <script>
+      // Modo oscuro
+      const darkModeBtn = document.getElementById("darkModeBtn");
+      function setDarkMode(on) {
+        if (on) {
+          document.body.classList.add("dark");
+          darkModeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          document.body.classList.remove("dark");
+          darkModeBtn.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        localStorage.setItem("darkMode", on ? "1" : "0");
+      }
+      darkModeBtn.onclick = () =>
+        setDarkMode(!document.body.classList.contains("dark"));
+      if (
+        localStorage.getItem("darkMode") === "1" ||
+        (localStorage.getItem("darkMode") === null &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        setDarkMode(true);
+      } else {
+        setDarkMode(false);
+      }
+
+      // Login funcional
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const usuario = document.getElementById("loginUsuario").value;
+          const password = document.getElementById("loginPassword").value;
+          const loginError = document.getElementById("loginError");
+          loginError.classList.add("hidden");
+          try {
+            const res = await fetch(
+              "http://localhost/proyect-final/api/usuarios.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ usuario, password }),
+              }
+            );
+            const data = await res.json();
+            if (data.success) {
+              localStorage.setItem("usuario", data.usuario);
+              localStorage.setItem("tipo_usuario", data.tipo_usuario);
+              window.location.href = "index.html";
+            } else {
+              loginError.textContent = data.error || "Error de autenticación";
+              loginError.classList.remove("hidden");
+            }
+          } catch {
+            loginError.textContent = "Error de conexión con el servidor";
+            loginError.classList.remove("hidden");
+          }
+        });
+    </script>
+  </body>
+</html>

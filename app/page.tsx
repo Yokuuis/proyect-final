@@ -106,37 +106,23 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE_URL}/api/productos/read.php`, {
-        method: "GET",
+      const response = await fetch('http://localhost/proyect-final/api/productos.php', {
+        method: 'GET',
         headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
+        credentials: 'include'
       })
 
-      // Verificar si la respuesta es exitosa
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      // Verificar si la respuesta es JSON
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("Response is not JSON:", text.substring(0, 200))
-        throw new Error("El servidor no devolvió una respuesta JSON válida")
-      }
-
-      const data: ApiResponse = await response.json()
-
-      if (data.success && data.data) {
-        setProducts(data.data)
-        showAlert("success", `${data.data.length} productos cargados exitosamente`)
-      } else {
-        showAlert("error", data.message || "Error al cargar productos")
-      }
+      const data = await response.json()
+      setProducts(data)
+      showAlert("success", `${data.length} productos cargados exitosamente`)
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error('Error fetching products:', error)
       if (error instanceof Error) {
         if (error.message.includes("fetch")) {
           showAlert("error", "No se puede conectar al servidor. Verifica que XAMPP esté ejecutándose.")
@@ -495,18 +481,16 @@ export default function ProductsPage() {
         {/* Alertas */}
         {alert && (
           <Alert
-            className={`mb-6 ${
-              alert.type === "success"
+            className={`mb-6 ${alert.type === "success"
                 ? "border-green-200 bg-green-50"
                 : alert.type === "error"
                   ? "border-red-200 bg-red-50"
                   : "border-blue-200 bg-blue-50"
-            }`}
+              }`}
           >
             <AlertTriangle
-              className={`h-4 w-4 ${
-                alert.type === "success" ? "text-green-600" : alert.type === "error" ? "text-red-600" : "text-blue-600"
-              }`}
+              className={`h-4 w-4 ${alert.type === "success" ? "text-green-600" : alert.type === "error" ? "text-red-600" : "text-blue-600"
+                }`}
             />
             <AlertDescription
               className={
