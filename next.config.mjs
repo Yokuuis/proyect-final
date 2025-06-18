@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Remover la configuración de rewrites por ahora para evitar conflictos
 }
 
 export default nextConfig
