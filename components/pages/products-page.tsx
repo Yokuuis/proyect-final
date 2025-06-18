@@ -36,10 +36,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Sidebar } from "@/components/sidebar"
-import { Header } from "@/components/header"
-import { HomePage } from "@/components/pages/home-page"
-import { SuppliersPage } from "@/components/pages/suppliers-page"
 
 interface Product {
   id: number
@@ -59,14 +55,15 @@ interface ApiResponse {
   product?: Product
 }
 
-export type PageType = "home" | "products" | "suppliers"
+export function ProductsPage() {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost/tu-proyecto"
 
-export default function Dashboard() {
-  const [currentPage, setCurrentPage] = useState<PageType>("products")
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Estados principales
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+
+  // Estados del formulario
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
@@ -75,10 +72,14 @@ export default function Dashboard() {
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>("")
+
+  // Estados de modales y operaciones
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Estados de alertas
   const [alert, setAlert] = useState<{
     type: "success" | "error" | "info"
     message: string
@@ -86,15 +87,18 @@ export default function Dashboard() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Función para mostrar alertas temporales
   const showAlert = (type: "success" | "error" | "info", message: string) => {
     setAlert({ type, message })
     setTimeout(() => setAlert(null), 5000)
   }
 
+  // Cargar productos al montar el componente
   useEffect(() => {
     fetchProducts()
   }, [])
 
+  // Función para obtener todos los productos
   const fetchProducts = async () => {
     try {
       setLoading(true)
@@ -110,11 +114,8 @@ export default function Dashboard() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      // Verificar si la respuesta es JSON
       const contentType = response.headers.get("content-type")
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("Response is not JSON:", text.substring(0, 200))
         throw new Error("El servidor no devolvió una respuesta JSON válida")
       }
 
@@ -122,26 +123,18 @@ export default function Dashboard() {
 
       if (data.success && data.data) {
         setProducts(data.data)
-        showAlert("success", `${data.data.length} productos cargados exitosamente`)
       } else {
         showAlert("error", data.message || "Error al cargar productos")
       }
     } catch (error) {
-      console.error('Error fetching products:', error)
-      if (error instanceof Error) {
-        if (error.message.includes("fetch")) {
-          showAlert("error", "No se puede conectar al servidor. Verifica que XAMPP esté ejecutándose.")
-        } else {
-          showAlert("error", error.message)
-        }
-      } else {
-        showAlert("error", "Error desconocido al cargar productos")
-      }
+      console.error("Error fetching products:", error)
+      showAlert("error", "Error de conexión al servidor")
     } finally {
       setLoading(false)
     }
   }
 
+  // Manejar cambios en inputs del formulario
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -150,6 +143,7 @@ export default function Dashboard() {
     }))
   }
 
+  // Manejar selección de imagen
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -162,6 +156,7 @@ export default function Dashboard() {
     }
   }
 
+  // Limpiar formulario
   const resetForm = () => {
     setFormData({
       nombre: "",
@@ -176,6 +171,7 @@ export default function Dashboard() {
     }
   }
 
+  // Crear producto
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.nombre || !formData.precio || !formData.proveedor) {
@@ -195,13 +191,10 @@ export default function Dashboard() {
         formDataToSend.append("imagen", selectedImage)
       }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost/tu-proyecto"}/api/productos/create.php`,
-        {
-          method: "POST",
-          body: formDataToSend,
-        },
-      )
+      const response = await fetch(`${API_BASE_URL}/api/productos/create.php`, {
+        method: "POST",
+        body: formDataToSend,
+      })
 
       const data: ApiResponse = await response.json()
 
@@ -221,6 +214,7 @@ export default function Dashboard() {
     }
   }
 
+  // Preparar edición de producto
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product)
     setFormData({
@@ -229,10 +223,13 @@ export default function Dashboard() {
       precio: product.precio.toString(),
       proveedor: product.proveedor,
     })
-    setImagePreview(product.imagen || "")
+    if (product.imagen) {
+      setImagePreview(`${API_BASE_URL}${product.imagen}`)
+    }
     setIsEditModalOpen(true)
   }
 
+  // Actualizar producto
   const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingProduct || !formData.nombre || !formData.precio || !formData.proveedor) {
@@ -253,13 +250,10 @@ export default function Dashboard() {
         formDataToSend.append("imagen", selectedImage)
       }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost/tu-proyecto"}/api/productos/update.php`,
-        {
-          method: "POST",
-          body: formDataToSend,
-        },
-      )
+      const response = await fetch(`${API_BASE_URL}/api/productos/update.php`, {
+        method: "POST",
+        body: formDataToSend,
+      })
 
       const data: ApiResponse = await response.json()
 
@@ -280,18 +274,16 @@ export default function Dashboard() {
     }
   }
 
+  // Eliminar producto
   const handleDeleteProduct = async (productId: number) => {
     try {
       const formData = new FormData()
       formData.append("id", productId.toString())
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost/tu-proyecto"}/api/productos/delete.php`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      )
+      const response = await fetch(`${API_BASE_URL}/api/productos/delete.php`, {
+        method: "POST",
+        body: formData,
+      })
 
       const data: ApiResponse = await response.json()
 
@@ -307,12 +299,14 @@ export default function Dashboard() {
     }
   }
 
+  // Filtrar productos por búsqueda
   const filteredProducts = products.filter(
     (product) =>
       product.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.proveedor.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  // Componente del formulario
   const ProductForm = ({
     onSubmit,
     submitText,
@@ -467,252 +461,204 @@ export default function Dashboard() {
     </form>
   )
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case "home":
-        return <HomePage />
-      case "products":
-        return (
-          <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-              {/* Header */}
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Productos</h1>
-                <p className="text-gray-600">Administra tu inventario de productos de manera eficiente</p>
-              </div>
+  return (
+    <div className="space-y-6">
+      {/* Alertas */}
+      {alert && (
+        <Alert
+          className={`${
+            alert.type === "success"
+              ? "border-green-200 bg-green-50 dark:bg-green-950"
+              : alert.type === "error"
+                ? "border-red-200 bg-red-50 dark:bg-red-950"
+                : "border-blue-200 bg-blue-50 dark:bg-blue-950"
+          }`}
+        >
+          <AlertTriangle
+            className={`h-4 w-4 ${
+              alert.type === "success" ? "text-green-600" : alert.type === "error" ? "text-red-600" : "text-blue-600"
+            }`}
+          />
+          <AlertDescription
+            className={
+              alert.type === "success"
+                ? "text-green-800 dark:text-green-200"
+                : alert.type === "error"
+                  ? "text-red-800 dark:text-red-200"
+                  : "text-blue-800 dark:text-blue-200"
+            }
+          >
+            {alert.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
-              {/* Test de Conexión (solo en desarrollo) */}
-              {process.env.NODE_ENV === "development" && (
-                <div className="mb-6 flex justify-center">
-                  {/* ConnectionTest component should be imported and used here */}
-                </div>
-              )}
+      {/* Controles superiores */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Buscar productos o proveedores..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-              {/* Alertas */}
-              {alert && (
-                <Alert
-                  className={`mb-6 ${alert.type === "success"
-                      ? "border-green-200 bg-green-50"
-                      : alert.type === "error"
-                        ? "border-red-200 bg-red-50"
-                        : "border-blue-200 bg-blue-50"
-                    }`}
-                >
-                  <AlertTriangle
-                    className={`h-4 w-4 ${alert.type === "success" ? "text-green-600" : alert.type === "error" ? "text-red-600" : "text-blue-600"
-                      }`}
-                  />
-                  <AlertDescription
-                    className={
-                      alert.type === "success" ? "text-green-800" : alert.type === "error" ? "text-red-800" : "text-blue-800"
-                    }
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={fetchProducts} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+
+          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Producto
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Crear Nuevo Producto</DialogTitle>
+              </DialogHeader>
+              <ProductForm onSubmit={handleCreateProduct} submitText="Crear Producto" isSubmitting={isSubmitting} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Lista de productos */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-32 w-full mb-4" />
+                <Skeleton className="h-3 w-full mb-2" />
+                <Skeleton className="h-3 w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No se encontraron productos</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer producto"}
+            </p>
+            {!searchTerm && (
+              <Button onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Producto
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg font-semibold truncate">{product.nombre}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">{product.proveedor}</p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                   >
-                    {alert.message}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Controles superiores */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 space-y-4 sm:space-y-0">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Buscar productos o proveedores..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                    ${Number(product.precio).toFixed(2)}
+                  </Badge>
                 </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {product.imagen ? (
+                  <img
+                    src={`${API_BASE_URL}${product.imagen}` || "/placeholder.svg"}
+                    alt={product.nombre}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center">
+                    <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+
+                {product.descripcion && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{product.descripcion}</p>
+                )}
 
                 <div className="flex space-x-2">
-                  <Button variant="outline" onClick={fetchProducts} disabled={loading}>
-                    <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                    Actualizar
-                  </Button>
-
-                  <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                  <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                     <DialogTrigger asChild>
-                      <Button onClick={resetForm}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Nuevo Producto
+                      <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)} className="flex-1">
+                        <Edit className="w-4 h-4 mr-1" />
+                        Editar
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Crear Nuevo Producto</DialogTitle>
+                        <DialogTitle>Editar Producto</DialogTitle>
                       </DialogHeader>
                       <ProductForm
-                        onSubmit={handleCreateProduct}
-                        submitText="Crear Producto"
+                        onSubmit={handleUpdateProduct}
+                        submitText="Actualizar Producto"
                         isSubmitting={isSubmitting}
                       />
                     </DialogContent>
                   </Dialog>
-                </div>
-              </div>
 
-              {/* Lista de productos */}
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {[...Array(8)].map((_, i) => (
-                    <Card key={i} className="overflow-hidden">
-                      <CardHeader className="pb-3">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-3 w-1/2" />
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-32 w-full mb-4" />
-                        <Skeleton className="h-3 w-full mb-2" />
-                        <Skeleton className="h-3 w-2/3" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <Card className="text-center py-12">
-                  <CardContent>
-                    <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron productos</h3>
-                    <p className="text-gray-500 mb-4">
-                      {searchTerm ? "Intenta con otros términos de búsqueda" : "Comienza agregando tu primer producto"}
-                    </p>
-                    {!searchTerm && (
-                      <Button onClick={() => setIsCreateModalOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Crear Producto
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="flex-1">
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Eliminar
                       </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredProducts.map((product) => (
-                    <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-lg font-semibold truncate">{product.nombre}</CardTitle>
-                            <p className="text-sm text-gray-600 mt-1">{product.proveedor}</p>
-                          </div>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            ${Number(product.precio).toFixed(2)}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="space-y-4">
-                        {product.imagen ? (
-                          <img
-                            src={product.imagen || "/placeholder.svg"}
-                            alt={product.nombre}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <ImageIcon className="w-8 h-8 text-gray-400" />
-                          </div>
-                        )}
-
-                        {product.descripcion && (
-                          <p className="text-sm text-gray-600 line-clamp-2">{product.descripcion}</p>
-                        )}
-
-                        <div className="flex space-x-2">
-                          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditProduct(product)}
-                                className="flex-1"
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Editar
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Editar Producto</DialogTitle>
-                              </DialogHeader>
-                              <ProductForm
-                                onSubmit={handleUpdateProduct}
-                                submitText="Actualizar Producto"
-                                isSubmitting={isSubmitting}
-                              />
-                            </DialogContent>
-                          </Dialog>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm" className="flex-1">
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Eliminar
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center">
-                                  <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-                                  Confirmar Eliminación
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  ¿Estás seguro de que deseas eliminar el producto "{product.nombre}"? Esta acción no se
-                                  puede deshacer.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteProduct(product.id)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Eliminar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center">
+                          <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+                          Confirmar Eliminación
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          ¿Estás seguro de que deseas eliminar el producto "{product.nombre}"? Esta acción no se puede
+                          deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Eliminar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-              )}
-
-              {/* Footer con estadísticas */}
-              <div className="mt-12 text-center text-gray-500">
-                <p>
-                  Mostrando {filteredProducts.length} de {products.length} productos
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      case "suppliers":
-        return <SuppliersPage />
-      default:
-        return <HomePage />
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Sidebar
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
-
-      <div className="lg:ml-64">
-        <Header setSidebarOpen={setSidebarOpen} currentPage={currentPage} />
-
-        <main className="p-6">{renderPage()}</main>
-      </div>
-
-      {/* Overlay para móvil */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
+
+      {/* Footer con estadísticas */}
+      <div className="text-center text-muted-foreground">
+        <p>
+          Mostrando {filteredProducts.length} de {products.length} productos
+        </p>
+      </div>
     </div>
   )
 }
